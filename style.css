@@ -1,4 +1,4 @@
-body {
+/* body {
     margin: 0;
     font-family: sans-serif;
     line-height: 1.6;
@@ -48,4 +48,19 @@ background: #f0f0f0;
 
 tr:nth-child(even) {
 background: #fafafa;
+} */
+
+table {
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: center;
+}
+
+th {
+    background-color: #f0f0f0;
 }

@@ -1,66 +1,103 @@
-const ranks = ["S", "A", "B", "C", "D", "E"];
-const players = [
-"選手1",
-"選手2",
-"選手3",
-"選手4",
-"選手5",
-"選手6"
-];
+async function loadLeague(file) {
+    const response = await fetch(file);
+    const text = await response.text();
+    const rows = text.trim().split("\n");
+    return rows.slice(1).map(row => {
+        const [player1, player2, result] = row.split(",");
+        return {
+            player1: player1.trim(),
+            player2: player2.trim(),
+            result: result.trim()
+        };
+    });
+}
 
-function createLeague(rank, no) {
-const id = `${rank}${no}`;
+function reverseResult(result) {
+    const [a, b] = result.split("-");
+    return `${b}-${a}`;
+}
 
-let html = `
-<section class="league" id="${id}">
-    <h2>${id}リーグ</h2>
+function getResult(matches, player1, player2) {
+    const match = matches.find(m =>
+        (m.player1 === player1 && m.player2 === player2) ||
+        (m.player1 === player2 && m.player2 === player1)
+    );
 
-    <table>
-        <tr>
-            <th></th>
-            <th>${players[0]}</th>
-            <th>${players[1]}</th>
-            <th>${players[2]}</th>
-            <th>${players[3]}</th>
-            <th>${players[4]}</th>
-            <th>${players[5]}</th>
-            <th>勝</th>
-            <th>敗</th>
-            <th>順位</th>
-        </tr>
-`;
-
-for (let i = 0; i < 6; i++) {
-    html += `<tr><th>${players[i]}</th>`;
-
-    for (let j = 0; j < 6; j++) {
-        html += i === j
-            ? "<td>-</td>"
-            : "<td></td>";
+    if (!match) {
+        return "";
     }
 
+    return match.player1 === player1
+        ? match.result
+        : reverseResult(match.result);
+}
+
+async function getFiles() {
+    const data = await fetch('data/files.json').then(r => r.json());
+    return data.files;
+}
+
+function createLeague(rank, no, matches) {
+    const players = [...new Set(
+        matches.flatMap(m => [m.player1, m.player2])
+    )];
+
+    let html = `
+    <section id="${rank}${no}">
+        <h2>${rank}${no}リーグ</h2>
+        <table>
+            <tr>
+                <th></th>
+    `;
+    for (const player of players) {
+        html += `<th>${player}</th>`;
+    }
+
+    html += "</tr>";
+    for (const rowPlayer of players) {
+
+        html += `<tr><th>${rowPlayer}</th>`;
+
+        for (const colPlayer of players) {
+
+            html += rowPlayer === colPlayer
+                ? "<td>-</td>"
+                : `<td>${getResult(matches, rowPlayer, colPlayer)}</td>`;
+        }
+
+        html += "</tr>";
+    }
     html += `
-        <td></td>
-        <td></td>
-        <td></td>
-    </tr>`;
+        </table>
+    </section>
+    `;
+
+    return html;
 }
 
-html += `
-    </table>
-    <p><a href="#">ページ先頭へ戻る</a></p>
-</section>`;
-
-return html;
-
-}
-
-let html = "";
-
-for (const rank of ranks) {
-    for (let i = 1; i <= 4; i++) {
-    html += createLeague(rank, i);
+async function main() {
+    console.log("main.start");
+    const files = await getFiles();
+    let html = "";
+    // files からリンク作成
+    for (const file of files) {
+            const rank = file[0];
+            const number = file[1];
+        html += `<a href="#${rank}${number}">${rank}${number}リーグ</a><br>`;
     }
+    // files からリーグ表結果作成
+    for (const file of files) {
+            // csv からデータ読み込み
+            const matches = await loadLeague(`data/${file}`);
+            // リーグ表作成
+            const rank = file[0];
+            const number = file[1];
+            html += createLeague(rank, number, matches);
+    }
+    document.getElementById("leagues").innerHTML = html;
+
+
+    console.log("main.end");
 }
 
-document.getElementById("leagues").innerHTML = html;
+main();
